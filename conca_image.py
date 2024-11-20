@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import os
 
 
 def create_panorama(image_paths):
@@ -51,9 +52,9 @@ def create_panorama(image_paths):
                 print("Affine matrix is invalid, skipping this match.")
                 continue  # 如果仿射矩阵无效，则跳过这一对图像
 
-            # 计算目标画布的宽度和高度
-            result_width = max(result.shape[1], images[i].shape[1])
-            result_height = result.shape[0] + images[i].shape[0]  # 每次添加图像时增加高度
+            # 获取拼接后的结果图像的宽度和高度
+            result_width = max(result.shape[1], images[i].shape[1])  # 保证拼接图像的宽度
+            result_height = result.shape[0] + images[i].shape[0]  # 高度逐步增加
 
             # 创建新的画布（目标拼接图像）
             result_resized = np.zeros((result_height, result_width, 3), dtype=np.uint8)
@@ -61,26 +62,27 @@ def create_panorama(image_paths):
             # 将当前拼接图像复制到目标画布中
             result_resized[0:result.shape[0], 0:result.shape[1]] = result
 
-            # 将当前图像通过仿射变换加入到结果画布的下方
+            # 将当前图像通过仿射变换加入到结果画布的上方
             result_resized[result_offset_y:result_offset_y + images[i].shape[0], 0:images[i].shape[1]] = images[i]
 
             result = result_resized  # 更新结果图像
             result_offset_y += images[i].shape[0]  # 更新纵向偏移量
+
+            # 在重叠区域进行融合或裁剪处理
+            for y in range(result_offset_y):
+                for x in range(result.shape[1]):
+                    if np.all(result[y, x] != 0):  # 检查图像是否有内容
+                        # 使用加权叠加的方式，确保每个像素的RGB通道正确处理
+                        weighted = cv2.addWeighted(result[y, x].astype(np.float32), 0.5,
+                                                   images[i][y % images[i].shape[0], x].astype(np.float32), 0.5, 0)[0]
+
+                        # 将加权叠加后的像素值限制在 0 到 255 之间，并转回 uint8 类型
+                        result[y, x] = np.clip(weighted, 0, 255).astype(np.uint8)
+
         else:
             print(f"Not enough good matches for images {i - 1} and {i}. Skipping.")
 
     return result
-
-
-# # 示例使用
-# image_paths = ['image1.jpg', 'image2.jpg', 'image3.jpg']  # 图片路径列表
-# panorama = create_panorama(image_paths)
-#
-# # 保存结果
-# cv2.imwrite('panorama_vertical.jpg', panorama)
-
-
-import os
 
 
 def get_image_paths(folder_path, extensions=[".jpg", ".jpeg", ".png", ".bmp", ".tiff"]):
@@ -105,9 +107,7 @@ image_paths = get_image_paths(folder_path)
 image_paths.sort()
 
 print(image_paths)  # 打印所有图片路径
-# 示例使用
-# image_paths = ['image1.jpg', 'image2.jpg', 'image3.jpg']  # 图片路径列表
 panorama = create_panorama(image_paths)
-#
-# # 保存结果
+
+# 保存结果
 cv2.imwrite('panorama.jpg', panorama)

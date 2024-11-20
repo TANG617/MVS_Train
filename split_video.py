@@ -21,7 +21,7 @@ def split_and_concatenate_frames(video_path, output_image_path,  points_src, poi
     # 每一帧分割的行数
     rows = video_height // frame_height
     frames = []
-
+    idx = 0
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -42,13 +42,14 @@ def split_and_concatenate_frames(video_path, output_image_path,  points_src, poi
 
         cropped_frame = corrected_frame[start_y:end_y, :]
         frames.append(cropped_frame)
-        cv2.imwrite( "/Users/timli/DeepLearningProjects/MVS_Train/split/_" + str(index) + "_" + output_image_path, cropped_frame)
+        # cv2.imwrite( "/Users/timli/DeepLearningProjects/MVS_Train/split/idx_" + str(idx) + "_" + output_image_path, cropped_frame)
+        idx = idx + 1
 
     # 拼接图像
-    # concatenated_image = np.vstack(frames)  # 按行拼接
+    concatenated_image = np.vstack(frames)  # 按行拼接
 
     # 保存拼接后的图像
-    # cv2.imwrite(output_image_path, concatenated_image)
+    cv2.imwrite(output_image_path, concatenated_image)
 
     cap.release()
     print(f"Image saved as {output_image_path}")
@@ -63,9 +64,11 @@ points_src = [(283-40, 0), (1548+40, 0), (1707+40, 1080), (128-40, 1080)]  # 这
 frame_width = 1920
 frame_height = 1080
 points_dst = [(0, 0), (frame_width, 0), (frame_width, frame_height), (0, frame_height)]
-gap = 180
-overlay_gap = 20
-for i in range(int(1080/gap)):
-    split_and_concatenate_frames(video_path=video_path, output_image_path="i_" + str(i) +"_r_" + str(gap) + "_"+output_image_path, points_src=points_src, points_dst=points_dst , index = i, gap = gap, overlay = overlay_gap)
+# gap = 50
+overlay_gap = 0
+
+for gap in range(30,44,2):
+    for i in range(int(1080/gap)):
+        split_and_concatenate_frames(video_path=video_path, output_image_path="img_" + str(i) +"_gap_" + str(gap) + output_image_path, points_src=points_src, points_dst=points_dst , index = i, gap = gap, overlay = overlay_gap)
 # for i in range(8):
 #     split_and_concatenate_frames(video_path=video_path, output_image_path="range_"+str((i+1)*10)+output_image_path, points_src=points_src, points_dst=points_dst, gap = (i+1)*10 )
